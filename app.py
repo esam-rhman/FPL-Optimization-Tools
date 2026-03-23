@@ -111,7 +111,7 @@ def run_solver():
     def target():
         try:
             proc = subprocess.Popen(
-                ["python", "solve_regular.py"],
+                [sys.executable, "solve_regular.py"],
                 cwd=str(RUN_DIR),
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
