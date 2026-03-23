@@ -116,6 +116,21 @@
             </label>
           </div>
 
+          <div class="card">
+            <h3>Team Data</h3>
+            <label>Team data source
+              <select name="team_data">
+                <option value="json">Use team.json file</option>
+                <option value="ID">Fetch from FPL API by ID</option>
+              </select>
+              <small>How to load your current squad</small>
+            </label>
+            <label>FPL Team ID
+              <input type="number" name="team_id" min="1" placeholder="e.g. 123456" />
+              <small>Your team ID from the FPL website — required when source is set to "Fetch from FPL API"</small>
+            </label>
+          </div>
+
         </div>
         <div class="form-actions">
           <button type="submit" class="btn btn-primary">Save Settings</button>
@@ -143,12 +158,16 @@
 
         <div class="card upload-card">
           <h3>Current Team <span class="optional">optional</span></h3>
-          <p>Upload your <code>team.json</code> file. You can get this from the FPL API or configure a <strong>team_id</strong> in settings to fetch it automatically.</p>
+          <p>Upload your <code>team.json</code> file, or fetch it automatically using your FPL Team ID (set it in <strong>Settings → Team Data</strong>).</p>
           <div class="file-drop" id="drop-team" data-endpoint="/api/upload/team">
             <span class="drop-icon">👥</span>
             <span class="drop-text">Drop team.json here or <label for="input-team" class="link">browse</label></span>
             <input type="file" id="input-team" accept=".json" hidden />
             <div class="file-status" id="status-team"></div>
+          </div>
+          <div style="margin-top:0.75rem;display:flex;align-items:center;gap:0.75rem;">
+            <button class="btn btn-secondary" id="fetch-team-btn">Fetch from FPL API</button>
+            <span class="file-status" id="status-fetch-team"></span>
           </div>
         </div>
       </div>

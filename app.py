@@ -1,6 +1,7 @@
 import json
 import os
 import subprocess
+import sys
 import threading
 import time
 import uuid
@@ -81,6 +82,25 @@ def files_status():
         "review": REVIEW_FILE.exists(),
         "team": TEAM_FILE.exists(),
     })
+
+
+@app.route("/api/fetch/team", methods=["POST"])
+def fetch_team():
+    settings = load_settings()
+    team_id = settings.get("team_id")
+    if not team_id:
+        return jsonify({"error": "No team_id set in settings"}), 400
+    try:
+        src_dir = str(BASE_DIR / "src")
+        if src_dir not in sys.path:
+            sys.path.insert(0, src_dir)
+        from multi_period_dev import generate_team_json
+        my_data = generate_team_json(team_id, settings)
+        with open(str(TEAM_FILE), "w") as f:
+            json.dump(my_data, f, indent=2)
+        return jsonify({"status": "ok"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/api/run", methods=["POST"])

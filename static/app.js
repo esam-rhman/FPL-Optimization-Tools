@@ -46,6 +46,9 @@ async function loadSettings() {
 
   if (Array.isArray(cfg.locked)) setVal('locked', cfg.locked.join(', '));
   if (Array.isArray(cfg.banned)) setVal('banned', cfg.banned.join(', '));
+
+  if (cfg.team_data) setVal('team_data', cfg.team_data);
+  if (cfg.team_id)   setVal('team_id', cfg.team_id);
 }
 
 document.getElementById('settings-form').addEventListener('submit', async e => {
@@ -75,6 +78,8 @@ document.getElementById('settings-form').addEventListener('submit', async e => {
       tc: Number(form.chip_limits_tc.value),
       am: 0,
     },
+    team_data: form.team_data.value,
+    team_id:   form.team_id.value ? Number(form.team_id.value) : null,
   };
 
   await fetch('/api/config', {
@@ -133,6 +138,43 @@ async function uploadFile(file, endpoint, drop, status) {
 
 setupDrop('drop-review', 'input-review', 'status-review', '/api/upload/review');
 setupDrop('drop-team',   'input-team',   'status-team',   '/api/upload/team');
+
+document.getElementById('fetch-team-btn').addEventListener('click', async () => {
+  const btn = document.getElementById('fetch-team-btn');
+  const status = document.getElementById('status-fetch-team');
+
+  // Get team_id from saved settings
+  const cfgRes = await fetch('/api/config');
+  const cfg = await cfgRes.json();
+  if (!cfg.team_id) {
+    status.textContent = 'Set a Team ID in Settings first';
+    status.className = 'file-status error';
+    return;
+  }
+
+  btn.disabled = true;
+  status.textContent = 'Fetching…';
+  status.className = 'file-status';
+
+  try {
+    const res = await fetch('/api/fetch/team', { method: 'POST' });
+    const d = await res.json();
+    if (d.status === 'ok') {
+      status.textContent = '✓ team.json fetched successfully';
+      status.className = 'file-status ok';
+      document.getElementById('drop-team').classList.add('success');
+      loadFileStatus();
+    } else {
+      status.textContent = d.error || 'Fetch failed';
+      status.className = 'file-status error';
+    }
+  } catch {
+    status.textContent = 'Fetch failed';
+    status.className = 'file-status error';
+  } finally {
+    btn.disabled = false;
+  }
+});
 
 async function loadFileStatus() {
   const res = await fetch('/api/files/status');
