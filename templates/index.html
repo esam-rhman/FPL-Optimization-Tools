@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FPL Optimizer</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-icon">⚽</span>
+        <span>FPL <strong>Optimizer</strong></span>
+      </div>
+      <nav class="tabs">
+        <button class="tab active" data-tab="settings">Settings</button>
+        <button class="tab" data-tab="data">Data</button>
+        <button class="tab" data-tab="run">Run</button>
+        <button class="tab" data-tab="results">Results</button>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <!-- SETTINGS TAB -->
+    <section class="tab-content active" id="tab-settings">
+      <h2>Optimization Settings</h2>
+      <p class="subtitle">Configure the key parameters for your FPL optimization run.</p>
+      <form id="settings-form">
+        <div class="grid">
+
+          <div class="card">
+            <h3>Planning</h3>
+            <label>Horizon (gameweeks)
+              <input type="number" name="horizon" min="1" max="10" value="5" />
+            </label>
+            <label>Decay base
+              <input type="number" name="decay_base" step="0.01" min="0.5" max="1" value="0.84" />
+              <small>Future GW discount factor (lower = less future weight)</small>
+            </label>
+            <label>Free Transfer value
+              <input type="number" name="ft_value" step="0.1" min="0" max="5" value="1.5" />
+              <small>xP value of banking a free transfer</small>
+            </label>
+            <label>Hit cost (pts)
+              <input type="number" name="hit_cost" step="1" min="0" max="8" value="4" />
+            </label>
+            <label>Max weekly hits
+              <input type="number" name="weekly_hit_limit" step="1" min="0" max="5" value="1" />
+            </label>
+          </div>
+
+          <div class="card">
+            <h3>Constraints</h3>
+            <label>Max defenders per team
+              <input type="number" name="max_defenders_per_team" min="1" max="3" value="3" />
+            </label>
+            <label>Min expected minutes
+              <input type="number" name="xmin_lb" min="0" max="90" value="10" />
+              <small>Exclude players below this xMins threshold</small>
+            </label>
+            <label>No transfer last N GWs
+              <input type="number" name="no_transfer_last_gws" min="0" max="5" value="2" />
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" name="no_opposing_play" />
+              Avoid opposing players
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" name="preseason" />
+              Pre-season mode (ignore current squad)
+            </label>
+          </div>
+
+          <div class="card">
+            <h3>Chips</h3>
+            <div class="chip-grid">
+              <div class="chip-row">
+                <span class="chip-label">Wildcard</span>
+                <input type="number" name="chip_limits_wc" min="0" max="2" value="0" class="chip-input" />
+              </div>
+              <div class="chip-row">
+                <span class="chip-label">Bench Boost</span>
+                <input type="number" name="chip_limits_bb" min="0" max="1" value="0" class="chip-input" />
+              </div>
+              <div class="chip-row">
+                <span class="chip-label">Free Hit</span>
+                <input type="number" name="chip_limits_fh" min="0" max="1" value="0" class="chip-input" />
+              </div>
+              <div class="chip-row">
+                <span class="chip-label">Triple Captain</span>
+                <input type="number" name="chip_limits_tc" min="0" max="1" value="0" class="chip-input" />
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Player Filters</h3>
+            <label>Locked player IDs
+              <input type="text" name="locked" placeholder="e.g. 233, 307" />
+              <small>Force these players into squad (comma separated IDs)</small>
+            </label>
+            <label>Banned player IDs
+              <input type="text" name="banned" placeholder="e.g. 100, 200" />
+              <small>Exclude these players from squad</small>
+            </label>
+            <label>Solver
+              <select name="solver">
+                <option value="highs">HiGHS</option>
+                <option value="cbc">CBC</option>
+              </select>
+            </label>
+            <label>Solve name (output prefix)
+              <input type="text" name="solve_name" value="regular" />
+            </label>
+          </div>
+
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Save Settings</button>
+          <span class="save-status" id="save-status"></span>
+        </div>
+      </form>
+    </section>
+
+    <!-- DATA TAB -->
+    <section class="tab-content" id="tab-data">
+      <h2>Data Files</h2>
+      <p class="subtitle">Upload projection data and your current team before running.</p>
+
+      <div class="grid">
+        <div class="card upload-card">
+          <h3>Player Projections <span class="required">required</span></h3>
+          <p>Upload your <code>fplreview.csv</code> file from <a href="https://fplreview.com" target="_blank">fplreview.com</a>. The file should contain player IDs, names, positions, and GW expected points/minutes columns.</p>
+          <div class="file-drop" id="drop-review" data-endpoint="/api/upload/review">
+            <span class="drop-icon">📄</span>
+            <span class="drop-text">Drop fplreview.csv here or <label for="input-review" class="link">browse</label></span>
+            <input type="file" id="input-review" accept=".csv" hidden />
+            <div class="file-status" id="status-review"></div>
+          </div>
+        </div>
+
+        <div class="card upload-card">
+          <h3>Current Team <span class="optional">optional</span></h3>
+          <p>Upload your <code>team.json</code> file. You can get this from the FPL API or configure a <strong>team_id</strong> in settings to fetch it automatically.</p>
+          <div class="file-drop" id="drop-team" data-endpoint="/api/upload/team">
+            <span class="drop-icon">👥</span>
+            <span class="drop-text">Drop team.json here or <label for="input-team" class="link">browse</label></span>
+            <input type="file" id="input-team" accept=".json" hidden />
+            <div class="file-status" id="status-team"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:1rem;">
+        <h3>File Status</h3>
+        <div id="file-status-table">Loading...</div>
+      </div>
+    </section>
+
+    <!-- RUN TAB -->
+    <section class="tab-content" id="tab-run">
+      <h2>Run Optimizer</h2>
+      <p class="subtitle">Run the multi-period FPL optimizer with your current settings and data.</p>
+
+      <div class="card">
+        <div class="run-controls">
+          <button class="btn btn-primary btn-large" id="run-btn">▶ Run Optimization</button>
+          <div class="run-info">
+            <span id="run-status-badge" class="badge">idle</span>
+          </div>
+        </div>
+        <div class="log-container" id="log-container">
+          <div class="log-placeholder">Click "Run Optimization" to start. Output will appear here.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RESULTS TAB -->
+    <section class="tab-content" id="tab-results">
+      <h2>Results</h2>
+      <p class="subtitle">View the optimal transfer plan across gameweeks.</p>
+
+      <div class="results-controls">
+        <select id="result-file-select">
+          <option value="">-- select a result file --</option>
+        </select>
+        <button class="btn btn-secondary" id="load-results-btn">Load</button>
+      </div>
+
+      <div id="results-container">
+        <div class="empty-state">Run the optimizer or select a result file to see recommendations.</div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
